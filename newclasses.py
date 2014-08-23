@@ -6,7 +6,9 @@ import imaplib
 from tkinter import *
 from tkinter.messagebox import *
 
-
+"""
+Will make changes for multi-threading
+""
 
 """
 Mail client class
