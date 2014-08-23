@@ -6,9 +6,6 @@ import imaplib
 from tkinter import *
 from tkinter.messagebox import *
 
-"""
-This is just to see a change in nGit
-"""
 
 
 """
