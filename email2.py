@@ -2,8 +2,9 @@ import socket
 import ssl, re, os, sys
 from imapclient import IMAPClient
 from getpass import getpass
-import imaplib
+import imaplib, threading, queue, time
 from newclasses import *
+import _thread as thread
 
 """
 Constants
@@ -15,4 +16,5 @@ HOST = 'imap.mail.yahoo.com'
 CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
 services=[('Prodigy', HOST, USERNAME), ('Exchange', 'trout.indexengines.com', 'jiapicco')]
 
+mutex = thread.allocate_lock()
 mainwin(services, fields, cmds)
