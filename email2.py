@@ -14,7 +14,8 @@ cmds = ['copy', 'move', 'delete', 'fetch']
 USERNAME='jai1@prodigy.net'
 HOST = 'imap.mail.yahoo.com'
 CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
-services=[('Prodigy', HOST, USERNAME), ('Exchange', 'trout.indexengines.com', 'jiapicco')]
+services=[('Prodigy', HOST, USERNAME), ('Exchange', 'trout.indexengines.com', 'jiapicco'),
+          ('Google', 'imap.gmail.com', 'jiapicco@gmail.com')]
 
 mutex = thread.allocate_lock()
 mainwin(services, fields, cmds)
