@@ -19,14 +19,14 @@ class mail_client(imaplib.IMAP4_SSL):
     imaplib.IMAP4_SSL.__init__(self, host=HOST, port=PORT, keyfile=KEYFILE, certfile=CAFILE)
 
   def prnt(self):
-    print("in new method")
+    with mutex: print("in new method")
 
   def login(self, USERNAME, PASSWORD):
     #Connect to the mail server and log in
     try:
       imaplib.IMAP4_SSL.login(self, USERNAME, PASSWORD)
     except Exception as e:
-      print(e)
+      with mutex: print(e)
       return(False)
     else:
       return(True)
@@ -206,13 +206,13 @@ class email_search(threading.Thread):
     try:
       self.mail.select(self.mailbox)
     except Exception as e:
-      print(e)
+      with mutex: print(e)
       self.queue.put((False, lst))
     else:
       try:
         typ, lst = self.mail.search(None, '%s' % self.query)
       except Exception as e:
-        print('mailbox = %s, exception = %s' % (self.mailbox,e))
+        with mutex: print('mailbox = %s, exception = %s' % (self.mailbox,e))
         self.queue.put((False, lst))
       else:
         lst=lst[0].decode('utf-8')
@@ -235,7 +235,7 @@ class email_copy(threading.Thread):
       try:
         self.mail.copy(a, self.mailbox)
       except Exception as e:
-        print('in email_copy, e = %s' % e)
+        with mutex: print('in email_copy, e = %s' % e)
         self.queue.put(False)
         return
 
@@ -259,7 +259,7 @@ class email_move(threading.Thread):
       try:
         self.mail.copy(a, self.d_box)
       except Exception as e:
-        print(e)
+        with mutex: print(e)
         success = 0
     #Only delete if copy succeeded
     if(success == 1):
@@ -267,7 +267,7 @@ class email_move(threading.Thread):
           try:
             typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
           except Exception as e:
-            print(e)
+            with mutex: print(e)
       self.queue.put(True, failed)
       return 
     else:
@@ -296,7 +296,7 @@ class req_query(MyGui):
     try:
       mail.close()
     except Exception as e:
-      print(e)
+      with mutex: print(e)
     top.destroy()
   
   def make_query(self, top, fields, boxlst, cmds):
@@ -419,7 +419,7 @@ class req_query(MyGui):
             try:
               typ, response = mail.store(a,  '+FLAGS', r'(\Deleted)')
             except Exception as e:
-              print(e)
+              with mutex: print(e)
         return len(lst)
 
       #Move - actually copy and delete
@@ -462,7 +462,7 @@ class req_query(MyGui):
           try:
             typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
           except Exception as e:
-            print (e)
-          print(data)
+            with mutex: print (e)
+          with mutex: print(data)
         return len(lst)
           
