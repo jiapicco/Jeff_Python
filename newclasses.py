@@ -35,10 +35,15 @@ class mail_client(imaplib.IMAP4_SSL):
       return(False)
     else:
       return(True)
-
+  """
+  This method returns the name of the service for the imap session.
+  """
   def get_name(self):
     return self.name
 
+  """
+  Gets a list of all of the mailboxes
+  """
   def get_boxes(self):
     typ, boxes=self.list()
     boxlst=[]
@@ -85,6 +90,10 @@ class mainwin(MyGui):
     self.check_queue()
     self.top.mainloop()
 
+  """
+  This  method periodically checks the queue for the threads and runs the call back
+  function with the returned arguments (args)
+  """
   def check_queue(self):
     try:
       (callback, args) = self.mqueue.get(block=False)
@@ -211,9 +220,18 @@ class req_input(MyGui):
     else:
       return (True, self.respnse)
 
+"""
+This GUI class is used to confirm that operations should take place.
+This method will be called as a callable via check_queue. The arguments are:
+   - Text to be displayed to the user
+   - Callable to be used if the user selects continue
+   - Arguments for the callable
 
+These argumnents are contained in a tuple that must be converted to a list for processing
+and then the arguments to the callable need to be converted to tuple in order
+to be passed to the callable function.
+"""
 class confirm(MyGui):
-  #def __init__(self, txt, mail, box, lst, mutex):
   def __init__(self, args):
     args_list = list(args)
     top = Tk()
@@ -221,7 +239,6 @@ class confirm(MyGui):
     row = Frame(top)
     Label(row, text = args_list[0]).pack(side=TOP)
     row.pack(fill=X)
-    #top.title(args_list[0])
     args = tuple(args_list[1:])
     btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[1:]))))
     top.bind('<Return>', (lambda event: self.proceed(top, (args_list[1:]))))
@@ -234,6 +251,7 @@ class confirm(MyGui):
     func = args[0]
     args = tuple(args[1:])
     thread.start_new_thread(func, (args))
+    return
 
 """
 Class for a GUI window that provides status information to the user
@@ -249,7 +267,8 @@ class status(MyGui):
     return 
 
 """
-Class for the thread that will perform the actual search
+Class for the thread that will perform the actual search, uses the
+threading object model for threads
 """
 class email_search(threading.Thread):
   def __init__(self,  mail, query, mailbox, queue, mutex):
@@ -263,8 +282,6 @@ class email_search(threading.Thread):
     
 
   def run(self):
-    global print_mutex
-    print(self.mailbox+', '+self.query)
     lst = []
     try:
       self.mail.select(self.mailbox)
@@ -283,7 +300,8 @@ class email_search(threading.Thread):
         self.queue.put((True, lst))
     
 """
-Class for the thread that will perform email copy
+Class for the thread that will perform email copy, uses the
+threading object model for threads
 """
 class email_copy(threading.Thread):
   def __init__(self,  mail, msg, mailbox, queue, mutex):
@@ -307,7 +325,8 @@ class email_copy(threading.Thread):
     self.queue.put(True)
 
 """
-Class for the thread that moves messages
+Class for the thread that moves messages, uses the
+threading object model for threads
 """
 class email_move(threading.Thread):
   global print_mutex
@@ -331,10 +350,7 @@ class email_move(threading.Thread):
       with self.mutex: print(*e)
       self.queue.put(False)
       return
-    print('copy')
     for a in self.msg:
-      print(a)
-      i += 1
       try:
         self.mail.copy(a, self.d_box)
       except Exception as e:
@@ -342,11 +358,7 @@ class email_move(threading.Thread):
         success = 0
     #Only delete if copy succeeded
     if(success == 1):
-      i=0
-      print('delete')
       for a in new_list:
-        print(a)
-        i += 1
         try:
           typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
         except Exception as e:
@@ -360,7 +372,7 @@ class email_move(threading.Thread):
 
 """
 Class for GUI window that collects information for the query and then calls the
-method that is the main processing loop when the user submits input.
+function (run_query) that is the main processing thread when the user submits input.
 """
 class req_query(MyGui):
   def __init__(self, boxlst, fields, cmds, mail, mutex, mqueue):
@@ -428,8 +440,7 @@ class req_query(MyGui):
     for entry in ents:
       query[fields[i]] = entry.get()
       i += 1
-    #self.loop(s_box, query, cmd, a_box, boxes, mail)
-    thread.start_new_thread(loop, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue, self.name))
+    thread.start_new_thread(run_query, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue, self.name))
     return
 
 class status_frame():
@@ -444,10 +455,9 @@ class status_frame():
     self.var.set('Status:\n'+txt)
   
 
-def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
+def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
   dqueue = queue.Queue()
   mqueue.put((name.update, 'Running query.'))
-  #Prepare the query by adding individual terms
   search_query = '('
   for key in query.keys():
     if query[key]:
@@ -455,7 +465,6 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
         search_query = search_query+' '
       search_query = search_query+'%s \"%s\"' % (key, query[key])
   search_query = search_query+')'
-  print('Query = %s' % search_query)
   if (mailbox != 'ALL'):
     t = email_search(mail, search_query, mailbox, dqueue, print_mutex)
     t.start()
@@ -466,7 +475,6 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
       except queue.Empty:
         pass
       else:
-        print(lst)
         mqueue.put((name.update, 'Query complete.'))
         break
 
@@ -502,9 +510,7 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
 
   #If messages were found ask for what to do, else inform user that not messages matchedthe query
   if(len(lst)==0):
-    #status('No messages that matched query.')
     mqueue.put((name.update, ('No messages that matched query.')))
-    with print_mutex: print('No messages that matched query.')
     return
   
   else:
@@ -521,27 +527,10 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
       mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to move these messages?' % (mail.get_name(), len(lst), mailbox), \
                              move,  mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name))))
       return
-      #status('%i Messages found.' % len(lst))
-      mqueue.put((name.update, ('%i Messages found.' % len(lst))))
-      box = a_box
-      t = email_move(mail, lst, a_box, dqueue)
-      t.start
-      while(True):
-        time.sleep(3)
-        try:
-          result, failed = dqueue.get(block=False)
-        except queue.Empty:
-          pass
-        else:
-          break
-      if(result == False):
-        #status('%i Messaged failed copy during move.' % failed)
-        with print_mutex: print('%i Messaged failed copy during move.' % failed)
 
 
     #Copy
     elif ans == 'copy':
-      #status('%i Messages found. Copied to %s' % (len(lst), a_box))
       mqueue.put((name.update, ('%i Messages found. Copied to %s' % (len(lst), a_box))))
       t = email_copy(mail, lst, a_box, dqueue, print_mutex)
       t.start()
@@ -557,7 +546,6 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
 
     #Fetch message
     elif ans == 'fetch':
-      #status('%i Messages found.' % len(lst))
       mqueue.put((name.update, ('%i Messages found.' % len(lst))))
       with print_mutex: print('%i Messages found.' % len(lst))
       for a in lst:
@@ -567,7 +555,11 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
           with print_mutex: print (e)
         with print_mutex: print(data)
       return len(lst)
-        
+
+"""
+Function to perform deletion of emails. This is called after the user
+confirms that the operation should continue.
+"""
 def delete (mail, box, lst, mutex, mqueue, name):
   try:
     mail.select(box)
@@ -581,9 +573,11 @@ def delete (mail, box, lst, mutex, mqueue, name):
       with print_mutex: print(e)
   mqueue.put((name.update, ('%i Messages deleted.' % len(lst))))
 
-
+"""
+Function to perform move of emails. This is called after the user
+confirms that the operation should continue.
+"""
 def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
-  print(lst)
   t = email_move(mail, lst, mailbox, a_box, dqueue, print_mutex)
   t.start()
   while(True):
@@ -594,7 +588,6 @@ def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
     else:
       break
   if(result == False):
-    #status('%i Messaged failed copy during move.' % failed)
     with print_mutex: print('Messages failed copy during move.' )
     return
   else:
