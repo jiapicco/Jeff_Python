@@ -207,7 +207,7 @@ class req_input(MyGui):
       return (True, self.respnse)
 
 
-class confirm(MyGui):
+class confirm_delete(MyGui):
   #def __init__(self, txt, mail, box, lst, mutex):
   def __init__(self, args):
     txt = args[0]
