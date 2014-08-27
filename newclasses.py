@@ -17,24 +17,27 @@ Will make changes for multi-threading
 Mail client class
 """
 class mail_client(imaplib.IMAP4_SSL):
-  global print_mutex
-  def __init__(self, HOST, PORT=993, KEYFILE=None, CAFILE=None):
-    imaplib.IMAP4_SSL.__init__(self, host=HOST, port=PORT, keyfile=KEYFILE, certfile=CAFILE)
 
+  def __init__(self, sname, mutex, HOST, PORT=993, KEYFILE=None, CAFILE=None):
+    imaplib.IMAP4_SSL.__init__(self, host=HOST, port=PORT, keyfile=KEYFILE, certfile=CAFILE)
+    self.print_mutex = mutex
+    self.name = sname
   def prnt(self):
     global print_mutex
     with print_mutex: print("in new method")
 
   def login(self, USERNAME, PASSWORD):
-    global print_mutex
     #Connect to the mail server and log in
     try:
       imaplib.IMAP4_SSL.login(self, USERNAME, PASSWORD)
     except Exception as e:
-      with print_mutex: print(e)
+      with self.print_mutex: print(e)
       return(False)
     else:
       return(True)
+
+  def get_name(self):
+    return self.name
 
   def get_boxes(self):
     typ, boxes=self.list()
@@ -101,8 +104,10 @@ class btn():
     but = Button(row, text=label, command = (lambda: self.start_service(host, username, fields, cmds, mutex, mqueue)))
     but.pack()
     row.pack()
+    self.name = label
+    self.mutex = mutex
   def start_service(self, host, username, fields, cmds, mutex, mqueue):
-    mail = mail_client(host)
+    mail = mail_client(self.name, mutex, host)
     req_pw(mail, username, fields, cmds, mutex, mqueue)
 
 
@@ -207,29 +212,28 @@ class req_input(MyGui):
       return (True, self.respnse)
 
 
-class confirm_delete(MyGui):
+class confirm(MyGui):
   #def __init__(self, txt, mail, box, lst, mutex):
   def __init__(self, args):
-    txt = args[0]
-    mail = args[1]
-    box = args[2]
-    lst = args[3]
-    mutex = args[4]
-    mqueue = args[5]
-    name = args[6]
-    self.done = False
+    args_list = list(args)
     top = Tk()
     top.geometry('{}x{}'.format(500, 200))
-    top.title(txt)
-    btn = Button(top, text='Continue', command = (lambda: self.proceed(top, mail, box, lst, mutex, name)))
-    top.bind('<Return>', (lambda event: self.proceed(top, mail, box, lst, mutex, mqueue, name)))
+    row = Frame(top)
+    Label(row, text = args_list[0]).pack(side=TOP)
+    row.pack(fill=X)
+    #top.title(args_list[0])
+    args = tuple(args_list[1:])
+    btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[1:]))))
+    top.bind('<Return>', (lambda event: self.proceed(top, (args_list[1:]))))
     btn.pack(side=LEFT)
     Button(top, text='Cancel', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
     return
 
-  def proceed(self, top, mail, box, lst, mutex, mqueue, name):
+  def proceed(self, top, args):
     top.destroy()
-    delete(mail, box, lst, mutex, mqueue, name)
+    func = args[0]
+    args = tuple(args[1:])
+    thread.start_new_thread(func, (args))
 
 """
 Class for a GUI window that provides status information to the user
@@ -407,21 +411,6 @@ class req_query(MyGui):
       query[fields[i]] = entry.get()
       i += 1
     #self.loop(s_box, query, cmd, a_box, boxes, mail)
-      """
-    if(cmd == 'delete'):
-      x = req_input('Do youy really want to delete messages from %s?' % s_box)
-      while(True):
-        time.sleep(2)
-        tst, res = x.get_val()
-        print(tst)
-        if(tst == True): break
-      print(res)
-      if(res == 'y' or res == 'Y'):
-        print('doing delete')
-        thread.start_new_thread(loop, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue))
-    else:
-      thread.start_new_thread(loop, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue))
-      """
     thread.start_new_thread(loop, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue, self.name))
     return
 
@@ -503,8 +492,8 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
     ans = cmd
     #Delete
     if ans == 'delete':
-      mqueue.put((confirm_delete, (('%i Messages found in %s, do you really want to delete these messages? (y/n): ' % (len(lst), mailbox)), \
-                                   mail, mailbox, lst, print_mutex, mqueue, name)))
+      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to delete these messages? (y/n): ' % (mail.get_name(), len(lst), mailbox), \
+                             delete,  mail, mailbox, lst, print_mutex, mqueue, name))))
       return
 
     #Move - actually copy and delete
@@ -532,7 +521,6 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
     elif ans == 'copy':
       #status('%i Messages found. Copied to %s' % (len(lst), a_box))
       mqueue.put((name.update, ('%i Messages found. Copied to %s' % (len(lst), a_box))))
-      with print_mutex: print('%i Messages found. Copied to %s' % (len(lst), a_box))
       t = email_copy(mail, lst, a_box, dqueue, print_mutex)
       t.start()
       while(True):
