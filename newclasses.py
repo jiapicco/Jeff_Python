@@ -179,7 +179,7 @@ class req_pw(MyGui):
       top = req_query(boxes, fields, cmds, mail, self.mutex, mqueue)
     else:
       top.destroy()
-      req_pw(mail, USERNAME, fields, cmds)
+      req_pw(mail, USERNAME, fields, cmds, self.mutex, mqueue)
 
 """
 Class for a GUI window that prompts the user to provide tyext inpout
@@ -260,9 +260,11 @@ class email_search(threading.Thread):
     self.mailbox = mailbox
     self.queue = queue
     self.mutex = mutex
+    
 
   def run(self):
     global print_mutex
+    print(self.mailbox+', '+self.query)
     lst = []
     try:
       self.mail.select(self.mailbox)
@@ -291,7 +293,7 @@ class email_copy(threading.Thread):
     self.msg = msg
     self.mailbox = mailbox
     self.queue = queue
-    self.mutrex = mutex
+    self.mutex = mutex
 
   def run(self):
     for a in self.msg:
@@ -309,10 +311,11 @@ Class for the thread that moves messages
 """
 class email_move(threading.Thread):
   global print_mutex
-  def __init__(self, mail, msg, d_box, queue, mutex):
+  def __init__(self, mail, msg, s_box, d_box, queue, mutex):
     threading.Thread.__init__(self)
-    elf.mail = mail
+    self.mail = mail
     self.msg = msg
+    self.s_box = s_box
     self.d_box = d_box
     self.queue = queue
     self.mutex = mutex
@@ -320,7 +323,18 @@ class email_move(threading.Thread):
   def run(self):
     success = 1
     failed = 0
+    new_list = self.msg
+    i = 0
+    try:
+      self.mail.select(self.s_box)
+    except Exception as a:
+      with self.mutex: print(*e)
+      self.queue.put(False)
+      return
+    print('copy')
     for a in self.msg:
+      print(a)
+      i += 1
       try:
         self.mail.copy(a, self.d_box)
       except Exception as e:
@@ -328,15 +342,19 @@ class email_move(threading.Thread):
         success = 0
     #Only delete if copy succeeded
     if(success == 1):
-      for a in lst:
-          try:
-            typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
-          except Exception as e:
-            with print_mutex: print(e)
-      self.queue.put(True, failed)
+      i=0
+      print('delete')
+      for a in new_list:
+        print(a)
+        i += 1
+        try:
+          typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
+        except Exception as e:
+          with self.mutex: print(e)
+      self.queue.put(True)
       return 
     else:
-      self.queue.put(False, failed)
+      self.queue.put(False)
       return
           
 
@@ -349,7 +367,7 @@ class req_query(MyGui):
     self.mutex = mutex
     top = Tk()
     top.geometry('{}x{}'.format(500, 700))
-    top.title('Enter Query')
+    top.title(mail.get_name())
     ents, s_menu, a_menu = self.make_query(top, fields, boxlst, cmds)
     top.bind('<Return>', (lambda event: self.fetch(ents, s_menu, a_menu, top, boxlst, fields, mail, mutex, mqueue)))
     Button(top, text='Submit', command = (lambda: self.fetch(ents, s_menu, a_menu, top, boxlst, fields, mail, mutex, mqueue))).pack(side=LEFT)
@@ -423,7 +441,7 @@ class status_frame():
     self.row.pack(fill=X)
 
   def update(self, txt):
-    self.var.set('Status: '+txt)
+    self.var.set('Status:\n'+txt)
   
 
 def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
@@ -437,7 +455,7 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
         search_query = search_query+' '
       search_query = search_query+'%s \"%s\"' % (key, query[key])
   search_query = search_query+')'
-  #print('Query = %s' % search_query)
+  print('Query = %s' % search_query)
   if (mailbox != 'ALL'):
     t = email_search(mail, search_query, mailbox, dqueue, print_mutex)
     t.start()
@@ -448,6 +466,8 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
       except queue.Empty:
         pass
       else:
+        print(lst)
+        mqueue.put((name.update, 'Query complete.'))
         break
 
   else:
@@ -492,15 +512,17 @@ def loop(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
     ans = cmd
     #Delete
     if ans == 'delete':
-      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to delete these messages? (y/n): ' % (mail.get_name(), len(lst), mailbox), \
+      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to delete these messages?' % (mail.get_name(), len(lst), mailbox), \
                              delete,  mail, mailbox, lst, print_mutex, mqueue, name))))
       return
 
     #Move - actually copy and delete
     elif ans == 'move':
+      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to move these messages?' % (mail.get_name(), len(lst), mailbox), \
+                             move,  mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name))))
+      return
       #status('%i Messages found.' % len(lst))
       mqueue.put((name.update, ('%i Messages found.' % len(lst))))
-      with print_mutex: print('%i Messages found.' % len(lst))
       box = a_box
       t = email_move(mail, lst, a_box, dqueue)
       t.start
@@ -558,3 +580,27 @@ def delete (mail, box, lst, mutex, mqueue, name):
     except Exception as e:
       with print_mutex: print(e)
   mqueue.put((name.update, ('%i Messages deleted.' % len(lst))))
+
+
+def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
+  print(lst)
+  t = email_move(mail, lst, mailbox, a_box, dqueue, print_mutex)
+  t.start()
+  while(True):
+    try:
+      result= dqueue.get(block=False)
+    except queue.Empty:
+      pass
+    else:
+      break
+  if(result == False):
+    #status('%i Messaged failed copy during move.' % failed)
+    with print_mutex: print('Messages failed copy during move.' )
+    return
+  else:
+    mqueue.put((name.update, ('%i Messages moved' % len(lst))))
+
+
+
+        
+
