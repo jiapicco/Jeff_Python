@@ -9,9 +9,19 @@ import threading, queue, time
 global print_mutex
 import _thread as thread
 
+
+global mqueue
+mqueue = queue.Queue()
+
+
 """
-Will make changes for multi-threading
+function to display erroros
 """
+def log(txt):
+  global mqueue
+  mqueue.put((status, (txt)))
+  return
+
 
 """
 Mail client class
@@ -24,14 +34,15 @@ class mail_client(imaplib.IMAP4_SSL):
     self.name = sname
   def prnt(self):
     global print_mutex
-    with print_mutex: print("in new method")
+    #log("in new method")
+    log("in new method")
 
   def login(self, USERNAME, PASSWORD):
     #Connect to the mail server and log in
     try:
       imaplib.IMAP4_SSL.login(self, USERNAME, PASSWORD)
     except Exception as e:
-      with self.print_mutex: print(e)
+      log(e)
       return(False)
     else:
       return(True)
@@ -74,8 +85,8 @@ Class for the main GUI window
 """
 class mainwin(MyGui):
 
-  def __init__(self, inputs, fields, cmds, mutex, mqueue):
-    global print_mutex
+  def __init__(self, inputs, fields, cmds, mutex):
+    global print_mutex, mqueue
     
     self.top = Tk()
     self.top.geometry('{}x{}'.format(500, 200))
@@ -85,7 +96,7 @@ class mainwin(MyGui):
     but = Button(self.top, text='Quit', command = (lambda: self.gui_quit(self.top)))
     but.pack(side=LEFT)
     chk_but = Button(self.top, text = 'Check', command = (lambda: self.check_queue(mqueue))).pack(side=RIGHT)
-    self.top.bind('RETURN', (lambda: self.check_queue(mqueue)))
+    self.top.bind('RETURN', (lambda: self.check_queue()))
     self.mqueue = mqueue
     self.check_queue()
     self.top.mainloop()
@@ -95,6 +106,7 @@ class mainwin(MyGui):
   function with the returned arguments (args)
   """
   def check_queue(self):
+    global mqueue
     try:
       (callback, args) = self.mqueue.get(block=False)
     except queue.Empty:
@@ -117,7 +129,7 @@ class btn():
     self.mutex = mutex
   def start_service(self, host, username, fields, cmds, mutex, mqueue):
     mail = mail_client(self.name, mutex, host)
-    req_pw(mail, username, fields, cmds, mutex, mqueue)
+    req_pw(mail, username, fields, cmds, mutex)
 
 
 """
@@ -166,7 +178,8 @@ class ScrolledList(Frame):
 Class for a GUI window that asks for password and completes login process
 """
 class req_pw(MyGui):
-  def __init__(self, mail, USERNAME, fields, cmds, mutex, mqueue):
+  def __init__(self, mail, USERNAME, fields, cmds, mutex):
+    global mqueue
     self.mutex = mutex
     top = Tk()
     top.geometry('{}x{}'.format(500, 200))
@@ -174,21 +187,21 @@ class req_pw(MyGui):
     Label(top, text='Enter Password').pack(side=TOP)
     ent = Entry(top, show="*")
     ent.pack(side=TOP, expand=YES)
-    btn = Button(top, text='Submit', command = (lambda: self.login(mail, USERNAME, ent.get(), top, fields, cmds, mqueue)))
+    btn = Button(top, text='Submit', command = (lambda: self.login(mail, USERNAME, ent.get(), top, fields, cmds)))
     btn.pack(side=LEFT)
-    top.bind('<Return>', (lambda event: self.login(mail, USERNAME, ent.get(), top, fields, cmds, mqueue)))
+    top.bind('<Return>', (lambda event: self.login(mail, USERNAME, ent.get(), top, fields, cmds)))
     Button(top, text='Quit', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
     #top.mainloop()
     return
-  def login(self, mail, USERNAME, PASSWORD, top, fields, cmds, mqueue):
-    global print_mutex
+  def login(self, mail, USERNAME, PASSWORD, top, fields, cmds):
+    global print_mutex, mqueue
     if((mail.login(USERNAME, PASSWORD)) == True):
       top.destroy()
       boxes = mail.get_boxes()
       top = req_query(boxes, fields, cmds, mail, self.mutex, mqueue)
     else:
       top.destroy()
-      req_pw(mail, USERNAME, fields, cmds, self.mutex, mqueue)
+      req_pw(mail, USERNAME, fields, cmds, self.mutex)
 
 """
 Class for a GUI window that prompts the user to provide tyext inpout
@@ -259,8 +272,8 @@ Class for a GUI window that provides status information to the user
 class status(MyGui):
   def __init__(self, txt):
     top = Tk()
-    top.geometry('{}x{}'.format(500, 200))
-    top.title(txt)
+    top.geometry('{}x{}'.format(700, 200))
+    Label(top, text = txt).pack(side=TOP)
     btn = Button(top, text='Dismiss', command = (lambda: self.dismiss(top)))
     top.bind('<Return>', (lambda event: self.dismiss(top)))
     btn.pack(side=BOTTOM)
@@ -286,18 +299,20 @@ class email_search(threading.Thread):
     try:
       self.mail.select(self.mailbox)
     except Exception as e:
-      with self.mutex: print(e)
+      log(e)
       self.queue.put((False, lst))
+      return
     else:
       try:
         typ, lst = self.mail.search(None, '%s' % self.query)
       except Exception as e:
-        with self.mutex: print('mailbox = %s, exception = %s' % (self.mailbox,e))
+        log('mailbox = %s, exception = %s' % (self.mailbox,e))
         self.queue.put((False, lst))
       else:
         lst=lst[0].decode('utf-8')
         lst=lst.split( )
         self.queue.put((True, lst))
+        return
     
 """
 Class for the thread that will perform email copy, uses the
@@ -318,7 +333,7 @@ class email_copy(threading.Thread):
       try:
         self.mail.copy(a, self.mailbox)
       except Exception as e:
-        with self.mutex: print('in email_copy, e = %s' % e)
+        log('in email_copy, e = %s' % e)
         self.queue.put(False)
         return
 
@@ -347,14 +362,14 @@ class email_move(threading.Thread):
     try:
       self.mail.select(self.s_box)
     except Exception as a:
-      with self.mutex: print(*e)
+      log(*e)
       self.queue.put(False)
       return
     for a in self.msg:
       try:
         self.mail.copy(a, self.d_box)
       except Exception as e:
-        with self.mutex: print(e)
+        log(e)
         success = 0
     #Only delete if copy succeeded
     if(success == 1):
@@ -362,7 +377,7 @@ class email_move(threading.Thread):
         try:
           typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
         except Exception as e:
-          with self.mutex: print(e)
+          log(e)
       self.queue.put(True)
       return 
     else:
@@ -391,7 +406,7 @@ class req_query(MyGui):
     try:
       mail.close()
     except Exception as e:
-      with self.mutex: print(e)
+      log(e)
     top.destroy()
   
   def make_query(self, top, fields, boxlst, cmds):
@@ -547,13 +562,13 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
     #Fetch message
     elif ans == 'fetch':
       mqueue.put((name.update, ('%i Messages found.' % len(lst))))
-      with print_mutex: print('%i Messages found.' % len(lst))
+      log('%i Messages found.' % len(lst))
       for a in lst:
         try:
           typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
         except Exception as e:
-          with print_mutex: print (e)
-        with print_mutex: print(data)
+          log (e)
+        log(data)
       return len(lst)
 
 """
@@ -561,16 +576,19 @@ Function to perform deletion of emails. This is called after the user
 confirms that the operation should continue.
 """
 def delete (mail, box, lst, mutex, mqueue, name):
+  mqueue.put((name.update, ('Deleting %i messages.' % len(lst))))
   try:
     mail.select(box)
   except Exception as e:
-    with mutex: print(e)
+    log(e)
     return
   for a in lst:
     try:
       typ, response = mail.store(a,  '+FLAGS', r'(\Deleted)')
     except Exception as e:
-      with print_mutex: print(e)
+      log(e)
+    if(typ == False):
+      log('Error in delete')
   mqueue.put((name.update, ('%i Messages deleted.' % len(lst))))
 
 """
@@ -578,6 +596,7 @@ Function to perform move of emails. This is called after the user
 confirms that the operation should continue.
 """
 def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
+  mqueue.put((name.update, ('Moving %i messages' % len(lst))))
   t = email_move(mail, lst, mailbox, a_box, dqueue, print_mutex)
   t.start()
   while(True):
@@ -588,7 +607,7 @@ def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
     else:
       break
   if(result == False):
-    with print_mutex: print('Messages failed copy during move.' )
+    log('Messages failed copy during move.' )
     return
   else:
     mqueue.put((name.update, ('%i Messages moved' % len(lst))))
