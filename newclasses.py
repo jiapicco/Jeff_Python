@@ -9,17 +9,18 @@ import threading, queue, time
 global print_mutex
 import _thread as thread
 
-
-global mqueue
+"""
+Create global message queue (mqueue) and mutex for printing (print_mutex)
+"""
 mqueue = queue.Queue()
-
+print_mutex = thread.allocate_lock()
 
 """
 function to display erroros
 """
-def log(txt):
+def log(service, txt):
   global mqueue
-  mqueue.put((status, (txt)))
+  mqueue.put((status, (service, txt)))
   return
 
 
@@ -42,7 +43,7 @@ class mail_client(imaplib.IMAP4_SSL):
     try:
       imaplib.IMAP4_SSL.login(self, USERNAME, PASSWORD)
     except Exception as e:
-      log(e)
+      log(self.name, e)
       return(False)
     else:
       return(True)
@@ -85,9 +86,9 @@ Class for the main GUI window
 """
 class mainwin(MyGui):
 
-  def __init__(self, inputs, fields, cmds, mutex):
+  def __init__(self, inputs, fields, cmds):
     global print_mutex, mqueue
-    
+    mutex = print_mutex
     self.top = Tk()
     self.top.geometry('{}x{}'.format(500, 200))
     self.top.title('Select Mail Service')
@@ -270,8 +271,11 @@ class confirm(MyGui):
 Class for a GUI window that provides status information to the user
 """
 class status(MyGui):
-  def __init__(self, txt):
+  def __init__(self, args):
+    service = args[0]
+    txt = args[1]
     top = Tk()
+    top.title(service)
     top.geometry('{}x{}'.format(700, 200))
     Label(top, text = txt).pack(side=TOP)
     btn = Button(top, text='Dismiss', command = (lambda: self.dismiss(top)))
@@ -299,7 +303,7 @@ class email_search(threading.Thread):
     try:
       self.mail.select(self.mailbox)
     except Exception as e:
-      log(e)
+      log(self.mail.get_name(), e)
       self.queue.put((False, lst))
       return
     else:
@@ -333,7 +337,7 @@ class email_copy(threading.Thread):
       try:
         self.mail.copy(a, self.mailbox)
       except Exception as e:
-        log('in email_copy, e = %s' % e)
+        log(self.mail.get_name(), 'in email_copy, e = %s' % e)
         self.queue.put(False)
         return
 
@@ -361,15 +365,15 @@ class email_move(threading.Thread):
     i = 0
     try:
       self.mail.select(self.s_box)
-    except Exception as a:
-      log(*e)
+    except Exception as e:
+      log(self.mail.get_name(), e)
       self.queue.put(False)
       return
     for a in self.msg:
       try:
         self.mail.copy(a, self.d_box)
       except Exception as e:
-        log(e)
+        log(self.mail.get_name(), e)
         success = 0
     #Only delete if copy succeeded
     if(success == 1):
@@ -377,7 +381,7 @@ class email_move(threading.Thread):
         try:
           typ, response = self.mail.store(a,  '+FLAGS', r'(\Deleted)')
         except Exception as e:
-          log(e)
+          log(self.mail.get_name(), e)
       self.queue.put(True)
       return 
     else:
@@ -392,6 +396,7 @@ function (run_query) that is the main processing thread when the user submits in
 class req_query(MyGui):
   def __init__(self, boxlst, fields, cmds, mail, mutex, mqueue):
     self.mutex = mutex
+    self.mail = mail
     top = Tk()
     top.geometry('{}x{}'.format(500, 700))
     top.title(mail.get_name())
@@ -406,7 +411,7 @@ class req_query(MyGui):
     try:
       mail.close()
     except Exception as e:
-      log(e)
+      log(self.mail.get_name(), e)
     top.destroy()
   
   def make_query(self, top, fields, boxlst, cmds):
@@ -533,12 +538,14 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
     ans = cmd
     #Delete
     if ans == 'delete':
+      print('in delete')
       mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to delete these messages?' % (mail.get_name(), len(lst), mailbox), \
                              delete,  mail, mailbox, lst, print_mutex, mqueue, name))))
       return
 
     #Move - actually copy and delete
     elif ans == 'move':
+      print('in move')
       mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to move these messages?' % (mail.get_name(), len(lst), mailbox), \
                              move,  mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name))))
       return
@@ -562,13 +569,13 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
     #Fetch message
     elif ans == 'fetch':
       mqueue.put((name.update, ('%i Messages found.' % len(lst))))
-      log('%i Messages found.' % len(lst))
+      log(mail.get_name(), '%i Messages found.' % len(lst))
       for a in lst:
         try:
           typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
         except Exception as e:
           log (e)
-        log(data)
+        log(mail.get_name(), data)
       return len(lst)
 
 """
@@ -580,15 +587,15 @@ def delete (mail, box, lst, mutex, mqueue, name):
   try:
     mail.select(box)
   except Exception as e:
-    log(e)
+    log(mail.get_name(), e)
     return
   for a in lst:
     try:
       typ, response = mail.store(a,  '+FLAGS', r'(\Deleted)')
     except Exception as e:
-      log(e)
+      log(mail.get_name(), e)
     if(typ == False):
-      log('Error in delete')
+      log(mail.get_name(), 'Error in delete')
   mqueue.put((name.update, ('%i Messages deleted.' % len(lst))))
 
 """
@@ -607,7 +614,7 @@ def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
     else:
       break
   if(result == False):
-    log('Messages failed copy during move.' )
+    log(mail.get_name(), 'Messages failed copy during move.' )
     return
   else:
     mqueue.put((name.update, ('%i Messages moved' % len(lst))))

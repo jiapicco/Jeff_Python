@@ -6,6 +6,7 @@ import imaplib, threading, queue, time
 from newclasses import *
 import _thread as thread
 
+global mqueue, print_mutex
 
 """
 Constants
@@ -21,8 +22,8 @@ services=[('Prodigy', HOST, USERNAME),
 
 
 
-global mqueue
 
-print_mutex = thread.allocate_lock()
-mainwin(services, fields, cmds, print_mutex)
+
+
+mainwin(services, fields, cmds)
 
