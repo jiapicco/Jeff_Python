@@ -192,7 +192,6 @@ class req_pw(MyGui):
     btn.pack(side=LEFT)
     top.bind('<Return>', (lambda event: self.login(mail, USERNAME, ent.get(), top, fields, cmds)))
     Button(top, text='Quit', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
-    #top.mainloop()
     return
   def login(self, mail, USERNAME, PASSWORD, top, fields, cmds):
     global print_mutex, mqueue
@@ -220,11 +219,9 @@ class req_input(MyGui):
     top.bind('<Return>', (lambda event: self.response(top, ent.get())))
     btn.pack(side=LEFT)
     Button(top, text='Quit', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
-    #top.mainloop()
     return
   def response(self, top, ent):
     self.respnse = ent
-    print('destroying req_input')
     self.done = True
     top.destroy()
     return 
@@ -237,6 +234,7 @@ class req_input(MyGui):
 """
 This GUI class is used to confirm that operations should take place.
 This method will be called as a callable via check_queue. The arguments are:
+   - Name of the service, will be used in the title of dialog box
    - Text to be displayed to the user
    - Callable to be used if the user selects continue
    - Arguments for the callable
@@ -249,13 +247,14 @@ class confirm(MyGui):
   def __init__(self, args):
     args_list = list(args)
     top = Tk()
+    top.title(args_list[0])
     top.geometry('{}x{}'.format(500, 200))
     row = Frame(top)
-    Label(row, text = args_list[0]).pack(side=TOP)
+    Label(row, text = args_list[1]).pack(side=TOP)
     row.pack(fill=X)
-    args = tuple(args_list[1:])
-    btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[1:]))))
-    top.bind('<Return>', (lambda event: self.proceed(top, (args_list[1:]))))
+    args = tuple(args_list[2:])
+    btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[2:]))))
+    top.bind('<Return>', (lambda event: self.proceed(top, (args_list[2:]))))
     btn.pack(side=LEFT)
     Button(top, text='Cancel', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
     return
@@ -444,6 +443,9 @@ class req_query(MyGui):
     a_box = Frame(top)
     a_menu = ScrolledList(boxlst, a_box, 6, 'Destination Mailbpox', 15)
     a_box.pack(side=TOP, fill=X)
+    """
+    Frame object that will be used to update status information.
+    """
     self.name = status_frame(top)
     return entries, s_menu, a_menu
 
@@ -538,15 +540,13 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
     ans = cmd
     #Delete
     if ans == 'delete':
-      print('in delete')
-      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to delete these messages?' % (mail.get_name(), len(lst), mailbox), \
+      mqueue.put((confirm, ((mail.get_name(), '%i Messages found in %s, \ndo you really want to delete these messages?' % (len(lst), mailbox), \
                              delete,  mail, mailbox, lst, print_mutex, mqueue, name))))
       return
 
     #Move - actually copy and delete
     elif ans == 'move':
-      print('in move')
-      mqueue.put((confirm, (('Service: %s - %i Messages found in %s, \ndo you really want to move these messages?' % (mail.get_name(), len(lst), mailbox), \
+      mqueue.put((confirm, ((mail.get_name(), '%i Messages found in %s, \ndo you really want to move these messages?' % (len(lst), mailbox), \
                              move,  mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name))))
       return
 
