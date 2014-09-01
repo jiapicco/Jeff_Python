@@ -185,7 +185,7 @@ class req_pw(MyGui):
     top = Tk()
     top.geometry('{}x{}'.format(500, 200))
     top.title('Login')
-    Label(top, text='Enter Password').pack(side=TOP)
+    Label(top, text='Enter Password for %s' % mail.get_name()).pack(side=TOP)
     ent = Entry(top, show="*")
     ent.pack(side=TOP, expand=YES)
     btn = Button(top, text='Submit', command = (lambda: self.login(mail, USERNAME, ent.get(), top, fields, cmds)))
