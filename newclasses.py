@@ -10,6 +10,27 @@ global print_mutex
 import _thread as thread
 
 """
+Constants
+"""
+
+#Fields in the email that can be searched
+fields=['from', 'bcc', 'body', 'subject', 'cc', 'deleted', 'header', 'sentsince', 'sentbefore', 'senton']
+
+#Commands the user can execute
+cmds = ['copy', 'move', 'delete', 'fetch']
+
+#SSL Certificate File
+CAFILE = "c:\\\\strawberry\\\\perl\\\\vendor\\\\lib\\\\Mozilla\\\\CA\\\\cacert.pem"
+
+
+#Email services
+services=[('Prodigy', 'imap.mail.yahoo.com', 'jai1@prodigy.net'),
+          ('Exchange','trout.indexengines.com', 'jiapicco'),
+          ('Google', 'imap.gmail.com', 'jiapicco@gmail.com')]
+
+
+
+"""
 Create global message queue (mqueue) and mutex for printing (print_mutex)
 """
 mqueue = queue.Queue()
@@ -72,7 +93,7 @@ Sub-class for GUI windows
 """
 class MyGui(Frame):
   def __init__(self, parent=None):
-    #Super class must provide __init__
+    #Sub-class must provide __init__
     pass
   def gui_quit(self, top):
     top.destroy()
@@ -239,9 +260,7 @@ This method will be called as a callable via check_queue. The arguments are:
    - Callable to be used if the user selects continue
    - Arguments for the callable
 
-These argumnents are contained in a tuple that must be converted to a list for processing
-and then the arguments to the callable need to be converted to tuple in order
-to be passed to the callable function.
+These argumnents are contained in a tuple that must be converted to a list for processing.
 """
 class confirm(MyGui):
   def __init__(self, args):
@@ -252,16 +271,20 @@ class confirm(MyGui):
     row = Frame(top)
     Label(row, text = args_list[1]).pack(side=TOP)
     row.pack(fill=X)
-    args = tuple(args_list[2:])
     btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[2:]))))
     top.bind('<Return>', (lambda event: self.proceed(top, (args_list[2:]))))
     btn.pack(side=LEFT)
     Button(top, text='Cancel', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
     return
 
+  """
+  The first item in args is the function to be called and the remaining items
+  the argument to be passed the function
+  """
   def proceed(self, top, args):
     top.destroy()
     func = args[0]
+    #convert args to tuple for passing to func
     args = tuple(args[1:])
     thread.start_new_thread(func, (args))
     return
@@ -465,6 +488,10 @@ class req_query(MyGui):
     thread.start_new_thread(run_query, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue, self.name))
     return
 
+"""
+Class for frame in the Query that contains status.  Gets updated by a callback to update() that
+includes the string to be displayed.
+"""
 class status_frame():
   def __init__(self, top):
     self.row = Frame(top)
@@ -476,7 +503,10 @@ class status_frame():
   def update(self, txt):
     self.var.set('Status:\n'+txt)
   
-
+"""
+The main thread that executes the query.  If 'move' or 'delete' are selected as the command
+to execute a callback to the confoirm class is used to get user confirmation to proceed.
+"""
 def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
   dqueue = queue.Queue()
   mqueue.put((name.update, 'Running query.'))

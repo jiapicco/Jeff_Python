@@ -8,17 +8,6 @@ import _thread as thread
 
 global mqueue, print_mutex
 
-"""
-Constants
-"""
-fields=['from', 'bcc', 'body', 'subject', 'cc', 'deleted', 'header', 'sentsince', 'sentbefore', 'senton']
-cmds = ['copy', 'move', 'delete', 'fetch']
-USERNAME='jai1@prodigy.net'
-HOST = 'imap.mail.yahoo.com'
-CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
-services=[('Prodigy', HOST, USERNAME),
-          ('Exchange','trout.indexengines.com', 'jiapicco'),
-          ('Google', 'imap.gmail.com', 'jiapicco@gmail.com')]
 
 
 
