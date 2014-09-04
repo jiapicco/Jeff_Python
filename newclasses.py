@@ -649,7 +649,19 @@ def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
   else:
     mqueue.put((name.update, ('%i Messages moved' % len(lst))))
 
+    
+#
+#
+#______________________________________________________________________________________
+#
+#
 
+
+"""
+Here is the call to start the main window of the GUI that gets everythoing going
+"""
+
+mainwin(services, fields, cmds)
 
         
 
