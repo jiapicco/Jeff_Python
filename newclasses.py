@@ -20,7 +20,7 @@ fields=['from', 'bcc', 'body', 'subject', 'cc', 'deleted', 'header', 'sentsince'
 cmds = ['copy', 'move', 'delete', 'fetch']
 
 #SSL Certificate File
-CAFILE = "c:\\\\strawberry\\\\perl\\\\vendor\\\\lib\\\\Mozilla\\\\CA\\\\cacert.pem"
+CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
 
 
 #Email services
@@ -68,6 +68,9 @@ class mail_client(imaplib.IMAP4_SSL):
       return(False)
     else:
       return(True)
+
+
+    
   """
   This method returns the name of the service for the imap session.
   """
@@ -126,15 +129,19 @@ class mainwin(MyGui):
   """
   This  method periodically checks the queue for the threads and runs the call back
   function with the returned arguments (args)
+  Check for up to three (3) items on the queue
   """
   def check_queue(self):
     global mqueue
-    try:
-      (callback, args) = self.mqueue.get(block=False)
-    except queue.Empty:
-      pass
-    else:
-      callback(args)
+    i = 0
+    while(i <= 3):
+      try:
+        (callback, args) = self.mqueue.get(block=False)
+      except queue.Empty:
+        break
+      else:
+        callback(args)
+      i += 1
     self.top.after(1000, self.check_queue)
 
     
@@ -150,6 +157,7 @@ class btn():
     self.name = label
     self.mutex = mutex
   def start_service(self, host, username, fields, cmds, mutex, mqueue):
+    #mail = mail_client(self.name, mutex, host, 993, None, CAFILE)
     mail = mail_client(self.name, mutex, host)
     req_pw(mail, username, fields, cmds, mutex)
 
@@ -285,8 +293,7 @@ class confirm(MyGui):
     top.destroy()
     func = args[0]
     #convert args to tuple for passing to func
-    args = tuple(args[1:])
-    thread.start_new_thread(func, (args))
+    thread.start_new_thread(func, (tuple(args[1:])))
     return
 
 """
@@ -467,7 +474,8 @@ class req_query(MyGui):
     a_menu = ScrolledList(boxlst, a_box, 6, 'Destination Mailbpox', 15)
     a_box.pack(side=TOP, fill=X)
     """
-    Frame object that will be used to update status information.
+    Frame object that will be used to update status information. sel.name is a reference to the
+    status_frame object.
     """
     self.name = status_frame(top)
     return entries, s_menu, a_menu
@@ -538,6 +546,7 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
       t = email_search(mail, search_query, mailbox, dqueue, print_mutex)
       t.start()
       while(True):
+        time.sleep(3)
         try:
           (result, tmp) = dqueue.get(block=False)
         except queue.Empty:
@@ -661,6 +670,7 @@ def move(mail, mailbox, a_box, lst, print_mutex, dqueue, mqueue, name):
 Here is the call to start the main window of the GUI that gets everythoing going
 """
 
+print(CAFILE)
 mainwin(services, fields, cmds)
 
         
