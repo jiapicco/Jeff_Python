@@ -2,7 +2,7 @@ import socket
 import ssl, re, os, sys
 from imapclient import IMAPClient
 from getpass import getpass
-import imaplib
+import imaplib, email
 from tkinter import *
 from tkinter.messagebox import *
 import threading, queue, time
@@ -40,8 +40,9 @@ print_mutex = thread.allocate_lock()
 function to display erroros
 """
 def log(service, txt):
-  global mqueue
+  global mqueue, print_mutex
   mqueue.put((status, (service, txt)))
+  with print_mutex: print('%s: %s' % (service, txt))
   return
 
 
@@ -282,7 +283,7 @@ class confirm(MyGui):
     btn = Button(top, text='Continue', command = (lambda: self.proceed(top, (args_list[2:]))))
     top.bind('<Return>', (lambda event: self.proceed(top, (args_list[2:]))))
     btn.pack(side=LEFT)
-    Button(top, text='Cancel', command = (lambda: self.gui_quit(top))).pack(side=RIGHT)
+    Button(top, text='Cancel', command = (lambda: self.dismiss(top))).pack(side=RIGHT)
     return
 
   """
@@ -529,7 +530,7 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
     t = email_search(mail, search_query, mailbox, dqueue, print_mutex)
     t.start()
     while(True):
-      time.sleep(3)
+      time.sleep(.5)
       try:
         (result, lst) = dqueue.get(block=False)
       except queue.Empty:
@@ -546,7 +547,7 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
       t = email_search(mail, search_query, mailbox, dqueue, print_mutex)
       t.start()
       while(True):
-        time.sleep(3)
+        time.sleep(.5)
         try:
           (result, tmp) = dqueue.get(block=False)
         except queue.Empty:
@@ -596,7 +597,7 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
       t = email_copy(mail, lst, a_box, dqueue, print_mutex)
       t.start()
       while(True):
-        time.sleep(3)
+        time.sleep(.5)
         try:
           resukt = dqueue.get(block=False)
         except queue.Empty:
@@ -611,10 +612,13 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
       log(mail.get_name(), '%i Messages found.' % len(lst))
       for a in lst:
         try:
-          typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
+          #typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
+          typ, data = mail.fetch(a,'(RFC822)')
+          msg = email.message_from_string(data[0][1])
         except Exception as e:
           log (e)
-        log(mail.get_name(), data)
+        #log(mail.get_name(), data)
+        with print_mutex: print(msg)
       return len(lst)
 
 """
