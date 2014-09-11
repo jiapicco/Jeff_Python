@@ -17,7 +17,7 @@ Constants
 fields=['from', 'bcc', 'body', 'subject', 'cc', 'deleted', 'header', 'sentsince', 'sentbefore', 'senton']
 
 #Commands the user can execute
-cmds = ['copy', 'move', 'delete', 'fetch']
+cmds = ['move', 'delete', 'fetch', 'copy']
 
 #SSL Certificate File
 CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
@@ -428,12 +428,12 @@ class req_query(MyGui):
     self.mutex = mutex
     self.mail = mail
     top = Tk()
-    top.geometry('{}x{}'.format(500, 700))
+    top.geometry('{}x{}'.format(500, 650))
     top.title(mail.get_name())
     self.make_query(top, fields, boxlst, cmds)
     top.bind('<Return>', (lambda event: self.fetch(top, boxlst, fields, mail)))
-    Button(top, text='Submit', command = (lambda: self.fetch(top, boxlst, fields, mail))).pack(side=LEFT)
-    Button(top, text='Quit', command = (lambda: self.gui_quit(top, mail))).pack(side=RIGHT)
+    Button(top, anchor=S, text='Submit', command = (lambda: self.fetch(top, boxlst, fields, mail))).pack(side=LEFT, expand=1)
+    Button(top, anchor=S, text='Quit', command = (lambda: self.gui_quit(top, mail))).pack(side=RIGHT, expand=1)
     #top.mainloop()
     return
 
@@ -446,11 +446,16 @@ class req_query(MyGui):
   
   def make_query(self, top, fields, boxlst, cmds):
     self.entries = []
-    s_box = Frame(top)
+    s_box = Frame(top, relief=RAISED, borderwidth=1)
+    """
+    Frame object that will be used to update status information. sel.name is a reference to the
+    status_frame object.
+    """
+    self.name = status_frame(top)
     q_lst=['ALL', 'inbox']+boxlst
     self.s_menu = ScrolledList(q_lst, s_box, 6, 'Search Mailbox', 15)
     s_box.pack(side=TOP, fill=X)
-    term_box = Frame(top)
+    term_box = Frame(top, relief=RAISED)
     term_box_lab = Label(term_box, width = 15, text='Search Terms')
     term_box_lab.pack(side=LEFT)
     term_box.pack()
@@ -472,16 +477,14 @@ class req_query(MyGui):
       self.var.set(txt)
     c_lst.pack(side = TOP, fill = X)
     #variable to describe if the destination mailbox selection box is visible
-    self.make_dest_vis = False
+    self.make_dest_vis = True
     #create variable used by the destination mailbox selection box
-    self.a_box = None
-    self.a_menu = None
-    """
-    Frame object that will be used to update status information. sel.name is a reference to the
-    status_frame object.
-    """
+    self.a_box = Frame(top, relief=RAISED, borderwidth=2)
+    self.a_menu = ScrolledList(boxlst, self.a_box, 6, 'Destination Mailbpox', 15)
+    self.a_box.pack(side=TOP, fill=X)
 
-    self.name = status_frame(top)
+
+    
 
 
   """
@@ -495,14 +498,12 @@ class req_query(MyGui):
     if (cmd == 'copy' or cmd == 'move'):
       if(self.make_dest_vis == False):
         self.make_dest_vis = True
-        self.a_box = Frame(top)
         self.a_menu = ScrolledList(boxlst, self.a_box, 6, 'Destination Mailbpox', 15)
-        self.a_box.pack(side=TOP, fill=X)
       else:
         return
     elif(self.make_dest_vis == True):
       self.make_dest_vis = False
-      self.a_box.destroy()
+      self.a_menu.destroy()
 
   
   def fetch(self, top, boxes, fields, mail):
@@ -530,7 +531,7 @@ class status_frame():
   def __init__(self, top):
     self.row = Frame(top)
     self.var = StringVar(self.row)
-    self.var.set('Status: ')
+    self.var.set('Status:\n')
     self.lab = Label(self.row, textvariable = self.var).pack(side=TOP)
     self.row.pack(fill=X)
 
@@ -539,7 +540,7 @@ class status_frame():
   
 """
 The main thread that executes the query.  If 'move' or 'delete' are selected as the command
-to execute a callback to the confoirm class is used to get user confirmation to proceed.
+to execute a callback to the confirm class is used to get user confirmation to proceed.
 """
 def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, name):
   dqueue = queue.Queue()
