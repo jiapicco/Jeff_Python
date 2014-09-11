@@ -2,7 +2,7 @@ import socket
 import ssl, re, os, sys
 from imapclient import IMAPClient
 from getpass import getpass
-import imaplib, email
+import imaplib, email, pdb
 from tkinter import *
 from tkinter.messagebox import *
 import threading, queue, time
@@ -430,16 +430,16 @@ class req_query(MyGui):
     top = Tk()
     top.geometry('{}x{}'.format(500, 700))
     top.title(mail.get_name())
-    ents, s_menu, a_menu = self.make_query(top, fields, boxlst, cmds)
-    top.bind('<Return>', (lambda event: self.fetch(ents, s_menu, a_menu, top, boxlst, fields, mail, mutex, mqueue)))
-    Button(top, text='Submit', command = (lambda: self.fetch(ents, s_menu, a_menu, top, boxlst, fields, mail, mutex, mqueue))).pack(side=LEFT)
+    ents, s_menu, self.a_menu = self.make_query(top, fields, boxlst, cmds)
+    top.bind('<Return>', (lambda event: self.fetch(ents, s_menu, self.a_menu, top, boxlst, fields, mail, mutex, mqueue)))
+    Button(top, text='Submit', command = (lambda: self.fetch(ents, s_menu, self.a_menu, top, boxlst, fields, mail, mutex, mqueue))).pack(side=LEFT)
     Button(top, text='Quit', command = (lambda: self.gui_quit(top, mail))).pack(side=RIGHT)
     #top.mainloop()
     return
 
   def gui_quit(self, top, mail):
     try:
-      mail.close()
+      mail.logout()
     except Exception as e:
       log(self.mail.get_name(), e)
     top.destroy()
@@ -468,27 +468,51 @@ class req_query(MyGui):
     c_lst_lab.pack(side = LEFT)
     self.var = StringVar(c_lst)
     for txt in cmds:
-      Radiobutton(c_lst, text = txt, variable = self.var, value = txt, command = (lambda: self.on_press())).pack(anchor=W)
+      Radiobutton(c_lst, text = txt, variable = self.var, value = txt, command = (lambda: self.on_press(top, boxlst))).pack(anchor=W)
       self.var.set(txt)
     c_lst.pack(side = TOP, fill = X)
-    a_box = Frame(top)
-    a_menu = ScrolledList(boxlst, a_box, 6, 'Destination Mailbpox', 15)
-    a_box.pack(side=TOP, fill=X)
+    #variable to describe if the destination mailbox selection box is visible
+    self.make_dest_vis = False
+    #create variable used by the destination mailbox selection box
+    self.a_box = None
+    self.a_menu = None
     """
     Frame object that will be used to update status information. sel.name is a reference to the
     status_frame object.
     """
-    self.name = status_frame(top)
-    return entries, s_menu, a_menu
 
-  def on_press(self):
-    #print('radio button %s selected' % self.var.get())
-    pass
+    self.name = status_frame(top)
+    return entries, s_menu, self.a_menu
+
+  """
+  This method will make the destination mailbox selection box visible if the copy or move commands are selected.
+  The variable self.make_dest_vis is True if the selection box is currently being displayed and is False if
+  the selection box is not cutrrently being displayed.
+  """
+  def on_press(self, top, boxlst):
+    print('radio button %s selected' % self.var.get())
+    cmd = self.var.get()
+    if (cmd == 'copy' or cmd == 'move'):
+      if(self.make_dest_vis == False):
+        self.make_dest_vis = True
+        self.a_box = Frame(top)
+        self.a_menu = ScrolledList(boxlst, self.a_box, 6, 'Destination Mailbpox', 15)
+        self.a_box.pack(side=TOP, fill=X)
+      else:
+        return
+    elif(self.make_dest_vis == True):
+      self.make_dest_vis = False
+      self.a_box.destroy()
+
   
   def fetch(self, ents, s_menu, a_menu, top, boxes, fields, mail, mutex, mqueue):
     s_box = s_menu.get_val()
     cmd = self.var.get()
-    a_box = a_menu.get_val() 
+    #Check to see if destination selection box is visible, if so use that value other wise pass empty string
+    if(self.make_dest_vis == True):
+      a_box = a_menu.get_val()
+    else:
+      a_box = ''
     query = {}
     i = 0
     for entry in ents:
@@ -614,12 +638,25 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
         try:
           #typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
           typ, data = mail.fetch(a,'(RFC822)')
-          msg = email.message_from_string(data[0][1])
+          #msg = email.message_from_string(data[0][1])
+          
         except Exception as e:
           log (e)
         #log(mail.get_name(), data)
-        with print_mutex: print(msg)
-      return len(lst)
+        sdata = str(data[0][1])
+        #sdata = sdata[2:]
+        #sdata = sdata[:-1]
+        msg = email.message_from_string(str(data[0][1]))
+        maintype = msg.get_content_maintype()
+        if (maintype == 'multipart'):
+          with print_mutex: print('Multipart!!!')
+          for part in msg.walk():
+            if part.get_content_type() == 'text/plain':
+              with print_mutex: print(part.get_payload())
+        elif (maintype == 'text'):
+          with print_mutex: print('Text!!!')
+          with print_mutex: print(msg.get_payload())
+    return len(lst)
 
 """
 Function to perform deletion of emails. This is called after the user
