@@ -430,9 +430,9 @@ class req_query(MyGui):
     top = Tk()
     top.geometry('{}x{}'.format(500, 700))
     top.title(mail.get_name())
-    ents, s_menu, self.a_menu = self.make_query(top, fields, boxlst, cmds)
-    top.bind('<Return>', (lambda event: self.fetch(ents, s_menu, self.a_menu, top, boxlst, fields, mail, mutex, mqueue)))
-    Button(top, text='Submit', command = (lambda: self.fetch(ents, s_menu, self.a_menu, top, boxlst, fields, mail, mutex, mqueue))).pack(side=LEFT)
+    self.make_query(top, fields, boxlst, cmds)
+    top.bind('<Return>', (lambda event: self.fetch(top, boxlst, fields, mail)))
+    Button(top, text='Submit', command = (lambda: self.fetch(top, boxlst, fields, mail))).pack(side=LEFT)
     Button(top, text='Quit', command = (lambda: self.gui_quit(top, mail))).pack(side=RIGHT)
     #top.mainloop()
     return
@@ -445,10 +445,10 @@ class req_query(MyGui):
     top.destroy()
   
   def make_query(self, top, fields, boxlst, cmds):
-    entries = []
+    self.entries = []
     s_box = Frame(top)
     q_lst=['ALL', 'inbox']+boxlst
-    s_menu = ScrolledList(q_lst, s_box, 6, 'Search Mailbox', 15)
+    self.s_menu = ScrolledList(q_lst, s_box, 6, 'Search Mailbox', 15)
     s_box.pack(side=TOP, fill=X)
     term_box = Frame(top)
     term_box_lab = Label(term_box, width = 15, text='Search Terms')
@@ -457,12 +457,12 @@ class req_query(MyGui):
     for field in fields:
       row = Frame(top)
       lab = Label(row, width = 15, text = field)
-      ent = Entry(row)
-      ent.config(width=400) 
+      self.ent = Entry(row)
+      self.ent.config(width=400) 
       row.pack(side=TOP, fill=X)
       lab.pack(side=LEFT)
-      ent.pack(side=RIGHT, expand=YES, fill=X)
-      entries.append(ent)
+      self.ent.pack(side=RIGHT, expand=YES, fill=X)
+      self.entries.append(self.ent)
     c_lst = Frame(top)
     c_lst_lab = Label(c_lst, width = 15, text='Actions')
     c_lst_lab.pack(side = LEFT)
@@ -482,7 +482,7 @@ class req_query(MyGui):
     """
 
     self.name = status_frame(top)
-    return entries, s_menu, self.a_menu
+
 
   """
   This method will make the destination mailbox selection box visible if the copy or move commands are selected.
@@ -505,20 +505,21 @@ class req_query(MyGui):
       self.a_box.destroy()
 
   
-  def fetch(self, ents, s_menu, a_menu, top, boxes, fields, mail, mutex, mqueue):
-    s_box = s_menu.get_val()
+  def fetch(self, top, boxes, fields, mail):
+    global print_mutex, mqueue
+    s_box = self.s_menu.get_val()
     cmd = self.var.get()
     #Check to see if destination selection box is visible, if so use that value other wise pass empty string
     if(self.make_dest_vis == True):
-      a_box = a_menu.get_val()
+      a_box = self.a_menu.get_val()
     else:
       a_box = ''
     query = {}
     i = 0
-    for entry in ents:
+    for entry in self.entries:
       query[fields[i]] = entry.get()
       i += 1
-    thread.start_new_thread(run_query, (s_box, query, cmd, a_box, boxes, mail, mutex, mqueue, self.name))
+    thread.start_new_thread(run_query, (s_box, query, cmd, a_box, boxes, mail, print_mutex, mqueue, self.name))
     return
 
 """
