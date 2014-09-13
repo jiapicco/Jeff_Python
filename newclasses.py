@@ -2,7 +2,7 @@ import socket
 import ssl, re, os, sys
 from imapclient import IMAPClient
 from getpass import getpass
-import imaplib, email, pdb
+import imaplib, email, pdb, email.parser
 from tkinter import *
 from tkinter.messagebox import *
 import threading, queue, time
@@ -479,7 +479,7 @@ class req_query(MyGui):
     #variable to describe if the destination mailbox selection box is visible
     self.make_dest_vis = True
     #create variable used by the destination mailbox selection box
-    self.a_box = Frame(top, relief=RAISED, borderwidth=2)
+    self.a_box = Frame(top, borderwidth=2)
     self.a_menu = ScrolledList(boxlst, self.a_box, 6, 'Destination Mailbpox', 15)
     self.a_box.pack(side=TOP, fill=X)
 
@@ -634,12 +634,13 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
 
     #Fetch message
     elif ans == 'fetch':
+      #pdb.set_trace()
       mqueue.put((name.update, ('%i Messages found.' % len(lst))))
       log(mail.get_name(), '%i Messages found.' % len(lst))
       for a in lst:
         try:
           #typ, data = mail.fetch(a, '(BODY.PEEK[TEXT])')
-          typ, data = mail.fetch(a,'(RFC822)')
+          typ, data = mail.fetch(a, '(RFC822)')
           #msg = email.message_from_string(data[0][1])
           
         except Exception as e:
@@ -648,7 +649,10 @@ def run_query(mailbox, query, cmd, a_box, boxlst, mail, print_mutex, mqueue, nam
         sdata = str(data[0][1])
         #sdata = sdata[2:]
         #sdata = sdata[:-1]
-        msg = email.message_from_string(str(data[0][1]))
+        #msg = email.message_from_string(str(data[0][1]))
+        parser = email.parser.BytesParser()
+        #sdata= data[0][1].decode('utf-8')
+        msg = parser.parsebytes(data[0][1])
         maintype = msg.get_content_maintype()
         if (maintype == 'multipart'):
           with print_mutex: print('Multipart!!!')
