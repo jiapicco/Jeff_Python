@@ -13,28 +13,26 @@ person is:
 
 """
 
-
 import sys, pickle, person, re
 
-a= [0, 2, 4, 6, 8, 9]
-b = [0, 2, 3]
-c = [[x, y, (x+2)**y] for x in a for y in b]
-for d in (c):
-    print (d)
 #Create empty dictionary that will hold references to the person objects
 people={}
 old_cnt = 0
 #Check to see a db file already exist, is so input the objects from that file
+file = ''
 ans = input("Does a db file alread exist (y/n)?")
-while(True):
-    if ans == 'y' or ans == 'Y':
+if ans == 'y' or ans == 'Y':
+    while(True):
         file = input("Enter the file that holds the db:")
         try:
             INFILE = open(file, 'rb')
-        except Exception as e:
-            print("Error {0}".format(str(e)))
+        #If file does not exist go to beginning of loop
+        except (FileNotFoundError, IOError):
+            print('Invalid file name.')
             continue
-        #First object in the file is the number of person objects in the file
+        except Exception as e:
+            person.err(e)
+        #First object in the fiule is the number of person objects in the file
         old_cnt = pickle.load(INFILE)
         for i in range(old_cnt):
             people[i] = pickle.load(INFILE) 
@@ -52,7 +50,7 @@ while(True):
     print("\tPrint list filtered on partial string(pfilter)")
     print("\tSave the db file (save)")
     print("\tDelete recoord (delete)")
-    print("\tDefrag the list (defrag)")
+    print ("\tDefrag the list (defrag)")
     print("\tExit (exit)")
     print("_______________________________________________________________________")
     ans = input("Command: ")
@@ -72,10 +70,8 @@ while(True):
     elif ans == 'pfilter':
         person.partial_filter_obj(people)
     elif ans == 'save':
-        try:
-            file
-        except NameError:
-            file=input("Enter db file name: ")
+        if file == '':
+            file=input("Enter name of file for saving DB: ")
         try:
             OUTFILE = open(file, 'wb')
         except Exception as e:
@@ -93,6 +89,8 @@ while(True):
     elif ans == 'exit':
         ans1 = input("Do you want to save the db file before exiting (y/n)? ")
         if ans1 == 'y' or ans1 == 'Y':
+            if file == '':
+                file=input("Enter name of file for saving DB: ")
             try:
                 OUTFILE = open(file, 'wb')
             except Exception as e:

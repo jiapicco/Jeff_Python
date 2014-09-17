@@ -8,6 +8,8 @@ class person:
         self.bday = {'month':ibmonth, 'day':ibday, 'year':ibyear}
         self.hphone = ihome_phone
         self.cphone = icell_phone
+
+    #Access methods
     def set_name (self, name):
         self.name = name
         return
@@ -34,6 +36,8 @@ class person:
         return(self.hphone)
     def get_cellphone(self):
         return(self.cphone)
+
+    #Method to print the object
     def prt(self):
         print ("Name:\t\t", self.name, sep='')
         print("Address:\t", self.address['street'], sep='')
@@ -77,6 +81,7 @@ def edit_record(ref):
             ref.set_birthday(bdate[:2], bdate[3:5], bdate[6:])
         else:
             print("Invalid input!")
+            continue
         ans = input("Do you want to edit another field?")
         if ans == 'n' or ans == 'N' : break
     ref.prt()
@@ -87,7 +92,7 @@ def err(e):
     print("Error {0}".format(str(e)))
     sys.exit()
 
-#Check if a zip code is valid
+#Check if a zip code is valid - only 5 digits
 def valid_zcode(input):
     if re.match(r'[0-9]{5}', input) and len(input) == 5:
         return(True)
@@ -96,18 +101,25 @@ def valid_zcode(input):
                      
 #Check if the date is valid
 def valid_date(input):
+    #Days in each month
     month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    if len(input) > 10:
+        return(False)
     if not re.match(r'[01]{1}[0-9]{1}-[0-3]{1}[0-9]{1}-[12]{1}[0-9]{3}', input):
         return(False)
     if int(input[:2]) > 12 or int(input[:2]) < 1:
         return(False)
     if not re.match(r'[0-9]{4}', input[6:]):
         return(False)
+    #Check for leap year
     fractpart, intpart = math.modf(int(input[6:])/4)
     i = 1
-    j = int(input[:2]) -1
+    #Months 0-11
+    j = int(input[:2]) -1 
+    #If not February or not leap year set i to 0
     if j != 1 or (fractpart !=0 and j ==1):
         i = 0
+    #Add i to days in the month for the validity check
     if int(input[3:5]) > (month[j] + i)  or int(input[3:5]) < 0:
         return(False)
     return(True)
@@ -123,7 +135,8 @@ def valid_phone(input):
 #Subroutine to enter new people into the database
 #Return the count of people in the database
 def enter(people):
-    cnt = 0
+    cnt = 1
+    i = 0
     for j in sorted(people.keys()):
         i = j + 1
         cnt += 1
@@ -149,29 +162,21 @@ def enter(people):
 
 
 #Subroutine to search
-def search(people):
-    gen_func = yield_find_obj(people)
-    while(True):
-        try:
-            result = gen_func.__next__()
-        except StopIteration:
-            break
-        print("Found this record: ", result)
-        people[result].prt()
-        ans = input("Do you want to edit this record (y/n)?")
-        if ans == 'y' or ans == 'Y':
-            edit_record(people[result])
-    return
+def search(people):    
+        result = find_obj(people)
+        for index in (result):
+            print("Found this record: ", index)
+            people[index].prt()
+            ans = input("Do you want to edit this record (y/n)?")
+            if ans == 'y' or ans == 'Y':
+                edit_record(people[index])
+        return
 
 
 #Subroutine to search
 def partial_search(people):    
-        gen_func = yield_partial_find_obj(people)
-        while(True):
-            try:
-                index = gen_func.__next__()
-            except StopIteration:
-                break
+        result = partial_find_obj(people)
+        for index in (result):
             print("Found this record: ", index)
             people[index].prt()
             ans = input("Do you want to edit this record (y/n)?")
@@ -181,23 +186,19 @@ def partial_search(people):
 
 #Subroutine to print a filtered list of records
 def filter_obj(people):
-    gen_func = yield_find_obj(people)
-    while(True):
-        try:
-            index = gen_func.__next__()
-        except StopIteration:
-            break
+    result = find_obj(people)
+    print ("")
+    for index in (result):
+        print("Record:", index)
         people[index].prt()
     return
 
 #Subroutine to print a filtered list of records
 def partial_filter_obj(people):
-    gen_func = yield_partial_find_obj(people)
-    while(True):
-        try:
-            index = gen_func.__next__()
-        except StopIteration:
-            break
+    result = partial_find_obj(people)
+    print ("")
+    for index in (result):
+        print("Record:", index)
         people[index].prt()
     return
 
@@ -323,53 +324,4 @@ def defrag(people):
         i += 1
     return
 
-
-#Subroutine to find a record that uses a yeild statement
-def yield_find_obj(people):
-    result = []
-    #Gather input
-    name = input("Enter Name: ")
-    street = input("Enter street address: ")
-    town = input("Enter town: ")
-    state = input("Enter state: ")
-    zip_code = input("Enter zip code: ")
-    hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
-    cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
-    bdate = input("Enter birthdate (mm-dd-yyyy): ")
-    search_obj = person(name, street, town, state, zip_code, hphone, cphone, bdate[:2], bdate[3:5], bdate[6:])
-    for index in (sorted(people.keys())):
-        if compare_obj(search_obj, people[index]):
-            yield index
-    return
-
-#Subroutine toi mfind objects based on partil matches that uses the yield statement
-def yield_partial_find_obj(people):
-    result = []
-    #Gather input
-    name = input("Enter Name: ")
-    street = input("Enter street address: ")
-    town = input("Enter town: ")
-    state = input("Enter state: ")
-    zip_code = input("Enter zip code: ")
-    hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
-    cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
-    ans = input("Enter month of birth date: ")
-    if ans == '':
-        month = '..'
-    else:
-        month = ans
-    ans = input("Enter day of birthday: ")
-    if ans == '':
-        day = '..'
-    else:
-        day = ans
-    ans = input("Enter year of birth date: ")
-    if ans == '':
-        year = '....'
-    else:
-        year = ans
-    search_obj = person(name, street, town, state, zip_code, hphone, cphone, month, day, year)
-    for index in (sorted(people.keys())):
-        if partial_compare_obj(search_obj, people[index]):
-            yield index
-    return
+        
