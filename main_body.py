@@ -15,6 +15,12 @@ person is:
 
 import sys, pickle, person, re
 
+a= [0, 2, 4, 6, 8, 9]
+b = [0, 2, 3]
+c = [[x, y, (x+2)**y] for x in a for y in b]
+for d in (c):
+    print (d)
+
 #Create empty dictionary that will hold references to the person objects
 people={}
 old_cnt = 0
