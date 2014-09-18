@@ -15,6 +15,11 @@ person is:
 
 import sys, pickle, person, re
 
+"""
+Just a short test of list comprehension
+"""
+
+
 a= [0, 2, 4, 6, 8, 9]
 b = [0, 2, 3]
 c = [[x, y, (x+2)**y] for x in a for y in b]
@@ -23,6 +28,7 @@ for d in (c):
 
 #Create empty dictionary that will hold references to the person objects
 people={}
+#Count of people in the database
 old_cnt = 0
 #Check to see a db file already exist, is so input the objects from that file
 file = ''
@@ -36,9 +42,10 @@ if ans == 'y' or ans == 'Y':
         except (FileNotFoundError, IOError):
             print('Invalid file name.')
             continue
+        #Catch any other exceptions
         except Exception as e:
             person.err(e)
-        #First object in the fiule is the number of person objects in the file
+        #First object in the file is the number of person objects in the file
         old_cnt = pickle.load(INFILE)
         for i in range(old_cnt):
             people[i] = pickle.load(INFILE) 
