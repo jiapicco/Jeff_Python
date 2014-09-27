@@ -13,7 +13,7 @@ person is:
 
 """
 
-import sys, pickle, person, re
+import sys, pickle, person, re, pdb
 
 """
 Just a short test of list comprehension
@@ -52,20 +52,25 @@ if ans == 'y' or ans == 'Y':
         INFILE.close()
         break
 
+"""
+The following loop runs continuously and allows the user to enter commands to
+be executed.
+"""
 while(True):
-    print("_______________________________________________________________________")
-    print("Enter command:")
-    print("\tEnter new person (enter)")
-    print("\tSearch for a person (search)")
-    print("\tSearch based on partial string (partial)")
-    print("\tList all people (list)")
-    print("\tPrint filtered list (filter)")
-    print("\tPrint list filtered on partial string(pfilter)")
-    print("\tSave the db file (save)")
-    print("\tDelete recoord (delete)")
-    print ("\tDefrag the list (defrag)")
-    print("\tExit (exit)")
-    print("_______________________________________________________________________")
+    print('_______________________________________________________________________\
+\nEnter command:\
+\n\tEnter new person (enter)\
+\n\tSearch for a person (search)\
+\n\tSearch based on partial string (partial)\
+\n\tList all people (list)\
+\n\tPrint filtered list (filter)\
+\n\tPrint list filtered on partial string(pfilter)\
+\n\tSave the db file (save)\
+\n\tDelete recoord (delete)\
+\n\tDefrag the list (defrag)\
+\n\tExit (exit)\
+\n_______________________________________________________________________')
+
     ans = input("Command: ")
     if ans == 'enter':
         old_cnt = person.enter(people)
@@ -83,12 +88,19 @@ while(True):
     elif ans == 'pfilter':
         person.partial_filter_obj(people)
     elif ans == 'save':
-        if file == '':
-            file=input("Enter name of file for saving DB: ")
-        try:
-            OUTFILE = open(file, 'wb')
-        except Exception as e:
-            person.err(e)
+        #pdb.set_trace()
+        while (True):
+            reply = input('Enter file name, or nothing to use current fle: ')
+            if reply != '':
+                file = reply
+            try:
+                OUTFILE = open(file, 'wb')
+            except (FileNotFoundError, IOError):
+                print('Invalid file name %s.' % file)
+                continue        
+            except Exception as e:
+                person.err(e)
+            break
         cnt = len(people)
         #First object in the file is the number of person objects
         pickle.dump(cnt, OUTFILE)

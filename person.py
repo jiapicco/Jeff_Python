@@ -1,4 +1,4 @@
-import re, math, sys
+import re, math, sys, pdb
 
 
 class person:
@@ -36,6 +36,7 @@ class person:
         return(self.hphone)
     def get_cellphone(self):
         return(self.cphone)
+
 
     #Method to print the object
     def prt(self):
@@ -186,21 +187,76 @@ def partial_search(people):
 
 #Subroutine to print a filtered list of records
 def filter_obj(people):
-    result = find_obj(people)
-    print ("")
-    for index in (result):
-        print("Record:", index)
+    gen_func = yield_find_obj(people)
+    while(True):
+        try:
+            index = gen_func.__next__()
+        except StopIteration:
+            break
         people[index].prt()
+    return
+
+#Subroutine to find a record that uses a yeild statement
+def yield_find_obj(people):
+    result = []
+    #Gather input
+    name = input("Enter Name: ")
+    street = input("Enter street address: ")
+    town = input("Enter town: ")
+    state = input("Enter state: ")
+    zip_code = input("Enter zip code: ")
+    hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
+    cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
+    bdate = input("Enter birthdate (mm-dd-yyyy): ")
+    search_obj = person(name, street, town, state, zip_code, hphone, cphone, bdate[:2], bdate[3:5], bdate[6:])
+    for index in (sorted(people.keys())):
+        if compare_obj(search_obj, people[index]):
+            yield index
     return
 
 #Subroutine to print a filtered list of records
 def partial_filter_obj(people):
-    result = partial_find_obj(people)
-    print ("")
-    for index in (result):
-        print("Record:", index)
+    gen_func = yield_partial_find_obj(people)
+    while(True):
+        try:
+            index = gen_func.__next__()
+        except StopIteration:
+            break
         people[index].prt()
     return
+
+
+def yield_partial_find_obj(people):
+    result = []
+    #Gather input
+    name = input("Enter Name: ")
+    street = input("Enter street address: ")
+    town = input("Enter town: ")
+    state = input("Enter state: ")
+    zip_code = input("Enter zip code: ")
+    hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
+    cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
+    ans = input("Enter month of birth date: ")
+    if ans == '':
+        month = '..'
+    else:
+        month = ans
+    ans = input("Enter day of birthday: ")
+    if ans == '':
+        day = '..'
+    else:
+        day = ans
+    ans = input("Enter year of birth date: ")
+    if ans == '':
+        year = '....'
+    else:
+        year = ans
+    search_obj = person(name, street, town, state, zip_code, hphone, cphone, month, day, year)
+    for index in (sorted(people.keys())):
+        if partial_compare_obj(search_obj, people[index]):
+            yield(index)
+    return
+
 
 #Subroutine to delete record
 def delete(people):
