@@ -299,21 +299,16 @@ def partial_find_obj(people):
     zip_code = input("Enter zip code: ")
     hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
     cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
+    """
+    For the birthdate, build a regular expression that includes the partial field to be matched
+    using the . character to match any character.
+    """
     ans = input("Enter month of birth date: ")
-    if ans == '':
-        month = '..'
-    else:
-        month = ans
+    month = '.*'+ans+'.*'
     ans = input("Enter day of birthday: ")
-    if ans == '':
-        day = '..'
-    else:
-        day = ans
+    day = '.*'+ans+'.*'
     ans = input("Enter year of birth date: ")
-    if ans == '':
-        year = '....'
-    else:
-        year = ans
+    year = '.*'+ans+'.*'
     search_obj = person(name, street, town, state, zip_code, hphone, cphone, month, day, year)
     for index in (sorted(people.keys())):
         if partial_compare_obj(search_obj, people[index]):
@@ -345,8 +340,9 @@ def compare_obj(search_obj, target_obj):
         return(False)
     return(True)
 
-        
-        
+
+
+#Subroutine to compare two objects based on matching a portion of a field, null fields match anything         
 def partial_compare_obj(search_obj, target_obj):
     if not re.search(search_obj.get_name(), target_obj.get_name()):
         return(False)
