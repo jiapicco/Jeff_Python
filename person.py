@@ -236,21 +236,16 @@ def yield_partial_find_obj(people):
     zip_code = input("Enter zip code: ")
     hphone = input("Enter home phone number (xxx-xxx-xxxx): ")
     cphone = input("Enter cell phone number (xxx-xxx-xxxx): ")
+    """
+    For the birthdate, build a regular expression that includes the partial field to be matched
+    using the . character to match any character.
+    """
     ans = input("Enter month of birth date: ")
-    if ans == '':
-        month = '..'
-    else:
-        month = ans
+    month = '[0-9]*'+ans+'[0-9]*'
     ans = input("Enter day of birthday: ")
-    if ans == '':
-        day = '..'
-    else:
-        day = ans
+    day = '[0-9]*'+ans+'[0-9]*'
     ans = input("Enter year of birth date: ")
-    if ans == '':
-        year = '....'
-    else:
-        year = ans
+    year = '[0-9]*'+ans+'[0-9]*'
     search_obj = person(name, street, town, state, zip_code, hphone, cphone, month, day, year)
     for index in (sorted(people.keys())):
         if partial_compare_obj(search_obj, people[index]):
@@ -304,11 +299,11 @@ def partial_find_obj(people):
     using the . character to match any character.
     """
     ans = input("Enter month of birth date: ")
-    month = '.*'+ans+'.*'
+    month = '[0-9]*'+ans+'[0-9]*'
     ans = input("Enter day of birthday: ")
-    day = '.*'+ans+'.*'
+    day = '[0-9]*'+ans+'[0-9]*'
     ans = input("Enter year of birth date: ")
-    year = '.*'+ans+'.*'
+    year = '[0-9]*'+ans+'[0-9]*'
     search_obj = person(name, street, town, state, zip_code, hphone, cphone, month, day, year)
     for index in (sorted(people.keys())):
         if partial_compare_obj(search_obj, people[index]):
