@@ -30,7 +30,7 @@ for d in (c):
 people={}
 #Count of people in the database
 old_cnt = 0
-#Check to see a db file already exist, is so input the objects from that file
+#Check to see a db file already exist, if so input the objects from that file
 file = ''
 ans = input("Does a db file alread exist (y/n)?")
 if ans == 'y' or ans == 'Y':
@@ -115,11 +115,19 @@ while(True):
         ans1 = input("Do you want to save the db file before exiting (y/n)? ")
         if ans1 == 'y' or ans1 == 'Y':
             if file == '':
-                file=input("Enter name of file for saving DB: ")
-            try:
-                OUTFILE = open(file, 'wb')
-            except Exception as e:
-                person.err(e)
+                while(True):
+                    file = input("Enter the file that holds the db:")
+                    try:
+                        OUTFILE = open(file, 'wb')
+                    #If file does not exist go to beginning of loop
+                    except (FileNotFoundError, IOError):
+                        print('Invalid file name.')
+                        continue
+                    #Catch other exceptions
+                    except Exception as e:
+                        person.err(e)
+                    #If no exceptions, break out of loop
+                    break
             #First object in the file is the number of person objects
             cnt = len(people)
             pickle.dump(cnt, OUTFILE)
