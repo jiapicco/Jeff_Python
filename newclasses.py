@@ -127,9 +127,6 @@ class mainwin(MyGui):
     self.check_queue()
     self.top.mainloop()
 
-"""
-This comment is just to test git.
-"""
 
 
   """
