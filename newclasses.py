@@ -127,6 +127,11 @@ class mainwin(MyGui):
     self.check_queue()
     self.top.mainloop()
 
+"""
+This comment is just to test git.
+"""
+
+
   """
   This  method periodically checks the queue for the threads and runs the call back
   function with the returned arguments (args)
