@@ -2,6 +2,10 @@
 import sys, string, random, re
 
 """
+Test comment for git
+"""
+
+"""
 This script will generate files composed of random words. The number of characters in the files is set by the
 first argumentm to the script. The number of files is set by the second argument to the script. The third argument
 provides the directory in which the files will be created.
