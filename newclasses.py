@@ -236,7 +236,7 @@ class req_pw(MyGui):
       req_pw(mail, USERNAME, fields, cmds, self.mutex)
 
 """
-Class for a GUI window that prompts the user to provide tyext inpout
+Class for a GUI window that prompts the user to provide text input
 """
 class req_input(MyGui):
   def __init__(self, txt):
