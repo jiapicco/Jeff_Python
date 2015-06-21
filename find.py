@@ -1,9 +1,5 @@
 import re, sys, os, operator, stat
 
-"""
-Test comment for git - 2
-"""
-
 def CheckFile(file, name):
     result = 0
     try:
