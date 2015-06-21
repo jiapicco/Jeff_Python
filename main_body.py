@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
+new comment for git.
+"""
+
+"""
 This program will create a object for each person entered into the command line interface
 and then save the objects to a file using the pickle module.  Thr information captured for each
 person is:
