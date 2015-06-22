@@ -6,10 +6,6 @@ import imaplib, threading, queue, time
 from newclasses import *
 import _thread as thread
 
-"""
-Comment added on PC
-"""
-
 global mqueue, print_mutex
 
 
