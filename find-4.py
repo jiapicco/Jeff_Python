@@ -53,7 +53,7 @@ def err(e, *txt):
     
 
 #Open files to record any eceptions and the files that match the search criteria
-LOG = open('c:\\Python Source\\fail.log', 'w')
+LOG = open('c:\\Python Source\\exceptions.log', 'w')
 OUT = open('c:\\Python Source\\found.log', 'w')
 
 #First argument holds the starting directory and second arguments holds regular
