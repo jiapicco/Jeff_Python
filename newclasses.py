@@ -25,7 +25,7 @@ CAFILE = "c:\\strawberry\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem"
 
 #Email services
 services=[('Prodigy', 'imap.mail.yahoo.com', 'jai1@prodigy.net'),
-          ('Exchange','trout.indexengines.com', 'jiapicco'),
+          ('Exchange','outlook.office.com', 'jiapicco@indexengines.com'),
           ('Google', 'imap.gmail.com', 'jiapicco@gmail.com')]
 
 
