@@ -14,9 +14,6 @@ person is:
 
 """
 
-"""
-new comment
-"""
 
 import sys, pickle, person, re, pdb
 
